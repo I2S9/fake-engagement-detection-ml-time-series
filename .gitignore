@@ -1,5 +1,10 @@
-# Cursor rules file
+# IDE and editor files
 .cursorrules
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # Python
 __pycache__/
@@ -23,6 +28,13 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
 
 # Virtual environments
 venv/
@@ -30,27 +42,15 @@ env/
 ENV/
 .venv
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb_checkpoints
 
-# Environment variables
-.env
-.env.local
-
-# MLflow
-mlruns/
-mlartifacts/
-
-# Data directories (uncomment if you don't want to track data)
-# data/raw/
-# data/processed/
+# Data files
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
 
 # Model artifacts
 models/
@@ -58,12 +58,24 @@ models/
 *.h5
 *.pt
 *.pth
+*.ckpt
+mlruns/
 
 # Logs
 *.log
 logs/
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Environment variables
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
 
