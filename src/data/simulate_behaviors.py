@@ -144,41 +144,62 @@ def simulate_normal_user(
     base = generate_base_pattern(length, timestamps=timestamps)
 
     if profile == "regular":
-        # typical user with consistent engagement
+        # Utilisateur régulier: stable, modéré, engagement cohérent
         scale = 20
-        base *= local_rng.uniform(0.8, 1.2, length)
+        base *= local_rng.uniform(0.85, 1.15, length)
+        # faible variance pour stabilité
+        base += local_rng.normal(0, 0.05, length)
 
     elif profile == "impulsive":
-        # user with occasional spikes (organic viral moments)
+        # Utilisateur impulsif: pics ponctuels mais plausibles (moments viraux organiques)
         scale = 30
         base *= local_rng.uniform(0.9, 1.3, length)
-        # add 2-4 organic spikes
-        n_spikes = local_rng.integers(2, 5)
+        # 2-5 pics organiques répartis
+        n_spikes = local_rng.integers(2, 6)
         spikes_idx = local_rng.choice(length, size=n_spikes, replace=False)
         for idx in spikes_idx:
-            base[idx] *= local_rng.uniform(1.5, 2.5)
+            # pics modérés, pas trop suspects
+            base[idx] *= local_rng.uniform(1.8, 3.0)
+            # petit effet de traînée
+            if idx + 1 < length:
+                base[idx + 1] *= 1.15
 
     elif profile == "dormant":
-        # low activity user
+        # Utilisateur dormant: peu actif, long tail (distribution avec beaucoup de zéros/faibles valeurs)
         scale = 5
-        base *= local_rng.uniform(0.5, 0.8, length)
+        base *= local_rng.uniform(0.4, 0.7, length)
+        # ajouter des périodes d'inactivité totale
+        inactive_ratio = local_rng.uniform(0.2, 0.4)
+        n_inactive = int(length * inactive_ratio)
+        inactive_idx = local_rng.choice(length, size=n_inactive, replace=False)
+        base[inactive_idx] *= 0.1  # presque zéro
 
     elif profile == "influencer":
-        # high baseline with occasional peaks
+        # Influenceur: haute amplitude, patterns irréguliers mais humains
         scale = 100
-        base *= local_rng.uniform(1.2, 1.8, length)
-        # occasional viral moments
-        n_viral = local_rng.integers(1, 3)
+        base *= local_rng.uniform(1.3, 2.0, length)
+        # patterns irréguliers mais naturels
+        irregularity = local_rng.normal(1.0, 0.25, length)
+        base *= irregularity
+        # quelques moments viraux majeurs
+        n_viral = local_rng.integers(1, 4)
         viral_idx = local_rng.choice(length, size=n_viral, replace=False)
         for idx in viral_idx:
-            base[idx] *= local_rng.uniform(2.0, 3.5)
+            base[idx] *= local_rng.uniform(2.5, 4.5)
+            # effet de traînée plus long pour influenceur
+            for j in range(1, min(4, length - idx)):
+                base[idx + j] *= (1.0 + 0.3 / j)
 
     elif profile == "new":
-        # new user with growing trend
+        # Nouveaux comptes: volume faible mais croissance naturelle
         scale = 8
-        trend = np.linspace(0.5, 1.5, length)
-        base *= trend
-        base *= local_rng.uniform(0.7, 1.1, length)
+        # croissance exponentielle douce
+        growth_factor = np.linspace(0.3, 1.5, length)
+        base *= growth_factor
+        base *= local_rng.uniform(0.6, 1.0, length)
+        # variabilité plus élevée au début (apprentissage)
+        early_noise = local_rng.normal(1.0, 0.3, length // 3)
+        base[:length // 3] *= early_noise
 
     elif profile == "casual":
         # casual viewer, moderate activity
@@ -321,6 +342,63 @@ def apply_fake_pattern(
         sync_signal = 1.0 + 0.8 * np.sin(2 * np.pi * np.arange(length) / 12)
         views_fake *= sync_signal
         anomaly_mask[:] = True
+
+    elif attack_type == "type_a_boosting_progressive":
+        # Type A: Boosting progressif - montée douce sans burst massif
+        start = local_rng.integers(low=length // 3, high=2 * length // 3)
+        duration = local_rng.integers(low=length // 4, high=length // 2)
+        end = min(start + duration, length)
+        # progression très douce
+        factor = np.linspace(1.1, 2.2, end - start)
+        views_fake[start:end] *= factor
+        anomaly_mask[start:end] = True
+
+    elif attack_type == "type_b_bots_synchronized":
+        # Type B: Bots synchronisés - spikes réguliers mais faibles
+        period = local_rng.integers(8, 15)
+        spike_multiplier = local_rng.uniform(1.5, 2.2)
+        for i in range(0, length, period):
+            if i < length:
+                views_fake[i] *= spike_multiplier
+                anomaly_mask[i] = True
+                # petit effet de spillover
+                if i + 1 < length:
+                    views_fake[i + 1] *= 1.1
+                    anomaly_mask[i + 1] = True
+
+    elif attack_type == "type_c_wave_spam":
+        # Type C: Spam par vagues - petites vagues répétées toutes les x heures
+        wave_period = local_rng.integers(6, 10)
+        wave_duration = local_rng.integers(2, 4)
+        wave_multiplier = local_rng.uniform(2.0, 3.0)
+        for i in range(0, length, wave_period):
+            end_wave = min(i + wave_duration, length)
+            views_fake[i:end_wave] *= wave_multiplier
+            anomaly_mask[i:end_wave] = True
+
+    elif attack_type == "type_d_window_anomaly":
+        # Type D: Anomalie seulement sur une fenêtre - 20 minutes d'activité suspecte
+        window_size = max(1, length // 20)  # environ 20 minutes si length=336 (2 semaines)
+        start = local_rng.integers(low=length // 4, high=3 * length // 4)
+        end = min(start + window_size, length)
+        # augmentation significative mais localisée
+        multiplier = local_rng.uniform(3.0, 5.0)
+        views_fake[start:end] *= multiplier
+        anomaly_mask[start:end] = True
+
+    elif attack_type == "type_e_superposition":
+        # Type E: Superposition d'engagement réel + fake - le plus réaliste
+        # on garde le pattern normal mais on ajoute un boost subtil
+        start = local_rng.integers(low=length // 4, high=length // 2)
+        duration = local_rng.integers(low=length // 6, high=length // 3)
+        end = min(start + duration, length)
+        # boost progressif qui suit le pattern naturel
+        base_boost = np.linspace(1.2, 2.5, end - start)
+        # ajouter de la variabilité pour paraître naturel
+        noise = local_rng.normal(1.0, 0.15, end - start)
+        factor = base_boost * noise
+        views_fake[start:end] *= factor
+        anomaly_mask[start:end] = True
 
     else:
         raise ValueError(f"Unknown attack_type: {attack_type}")
@@ -481,6 +559,11 @@ def generate_dataset(
         "single_spike",
         "off_peak_bursts",
         "perfect_sync",
+        "type_a_boosting_progressive",
+        "type_b_bots_synchronized",
+        "type_c_wave_spam",
+        "type_d_window_anomaly",
+        "type_e_superposition",
     ]
 
     all_series = []

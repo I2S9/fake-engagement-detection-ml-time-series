@@ -134,14 +134,26 @@ def load_data(
     else:
         raise ValueError(f"Unsupported file format: {file_format}")
 
-    # validate required columns
-    required_columns = ["id", "timestamp", "views", "likes", "comments", "shares", "label"]
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
+    # validate required columns (allow user_id instead of id, is_fake_series instead of label)
+    required_base = ["timestamp", "views", "likes", "comments", "shares"]
+    missing_base = [col for col in required_base if col not in df.columns]
+    if missing_base:
         raise ValueError(
-            f"Missing required columns: {missing_columns}. "
+            f"Missing required columns: {missing_base}. "
             f"Found columns: {df.columns.tolist()}"
         )
+    
+    # adapt column names if needed (new dataset format)
+    if 'user_id' in df.columns and 'id' not in df.columns:
+        df['id'] = df['user_id']
+    if 'is_fake_series' in df.columns and 'label' not in df.columns:
+        df['label'] = df['is_fake_series'].map({True: 'fake', False: 'normal'})
+    
+    # check that we have id and label now
+    if 'id' not in df.columns:
+        raise ValueError(f"Missing 'id' or 'user_id' column. Found: {df.columns.tolist()}")
+    if 'label' not in df.columns and 'is_fake_series' not in df.columns:
+        raise ValueError(f"Missing 'label' or 'is_fake_series' column. Found: {df.columns.tolist()}")
 
     return df
 

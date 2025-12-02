@@ -61,6 +61,10 @@ models/
 *.ckpt
 mlruns/
 
+# Outputs and results
+outputs/
+!outputs/.gitkeep
+
 # Logs
 *.log
 logs/

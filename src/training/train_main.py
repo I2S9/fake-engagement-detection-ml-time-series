@@ -210,7 +210,7 @@ def main():
     if args.data_path:
         data_path = args.data_path
     else:
-        data_path = config.get("data", {}).get("data_path", "data/raw/engagement_timeseries.parquet")
+        data_path = config.get("data", {}).get("data_path", "data/raw/engagement.parquet")
         if not os.path.isabs(data_path):
             data_path = project_root / data_path
 

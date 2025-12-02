@@ -364,7 +364,7 @@ def generate_dataset(
     length_days: int = 30,
     frequency: str = "H",
     start_date: Optional[datetime] = None,
-    output_path: str = "data/raw/engagement_timeseries.parquet",
+    output_path: str = "data/raw/engagement.parquet",
     output_format: str = "parquet",
     random_seed: int = 42,
 ) -> pd.DataFrame:
@@ -499,7 +499,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_path",
         type=str,
-        default="data/raw/engagement_timeseries.parquet",
+        default="data/raw/engagement.parquet",
         help="Output file path",
     )
     parser.add_argument(
