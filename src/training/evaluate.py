@@ -184,6 +184,8 @@ def plot_score_distributions(
     y_proba: np.ndarray,
     model_name: str = "Model",
     ax: Optional[plt.Axes] = None,
+    use_kde: bool = True,
+    bins: int = 50,
 ) -> plt.Axes:
     """
     Plot distribution of prediction scores for normal vs fake.
@@ -198,6 +200,10 @@ def plot_score_distributions(
         Name of the model for title
     ax : plt.Axes, optional
         Matplotlib axes to plot on
+    use_kde : bool
+        Whether to use KDE (Kernel Density Estimation) for smoother curves
+    bins : int
+        Number of bins for histogram
 
     Returns
     -------
@@ -205,7 +211,7 @@ def plot_score_distributions(
         Matplotlib axes
     """
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(12, 8))
 
     if y_proba.ndim > 1:
         y_proba_positive = y_proba[:, 1] if y_proba.shape[1] > 1 else y_proba.flatten()
@@ -215,13 +221,54 @@ def plot_score_distributions(
     normal_scores = y_proba_positive[y_true == 0]
     fake_scores = y_proba_positive[y_true == 1]
 
-    ax.hist(normal_scores, bins=30, alpha=0.6, label="Normal", color="blue", density=True)
-    ax.hist(fake_scores, bins=30, alpha=0.6, label="Fake", color="red", density=True)
-    ax.set_xlabel("Prediction Score (Fake Probability)", fontsize=12)
-    ax.set_ylabel("Density", fontsize=12)
-    ax.set_title(f"Score Distribution - {model_name}", fontsize=14, fontweight="bold")
-    ax.legend()
-    ax.grid(True, alpha=0.3)
+    # use KDE for smoother, more visible curves
+    if use_kde and len(normal_scores) > 0 and len(fake_scores) > 0:
+        try:
+            from scipy.stats import gaussian_kde
+            
+            # create KDE for normal scores
+            if len(normal_scores) > 1:
+                kde_normal = gaussian_kde(normal_scores)
+                x_normal = np.linspace(normal_scores.min(), normal_scores.max(), 200)
+                density_normal = kde_normal(x_normal)
+                ax.plot(x_normal, density_normal, label=f"{model_name} - Normal", 
+                       color="blue", linewidth=2.5, alpha=0.8)
+                ax.fill_between(x_normal, density_normal, alpha=0.3, color="blue")
+            
+            # create KDE for fake scores
+            if len(fake_scores) > 1:
+                kde_fake = gaussian_kde(fake_scores)
+                x_fake = np.linspace(fake_scores.min(), fake_scores.max(), 200)
+                density_fake = kde_fake(x_fake)
+                ax.plot(x_fake, density_fake, label=f"{model_name} - Fake", 
+                       color="red", linewidth=2.5, alpha=0.8)
+                ax.fill_between(x_fake, density_fake, alpha=0.3, color="red")
+        except ImportError:
+            # fallback to histogram if scipy not available
+            use_kde = False
+
+    # fallback to histogram if KDE not used or failed
+    if not use_kde:
+        ax.hist(normal_scores, bins=bins, alpha=0.6, label=f"{model_name} - Normal", 
+               color="blue", density=True, edgecolor="black", linewidth=0.5)
+        ax.hist(fake_scores, bins=bins, alpha=0.6, label=f"{model_name} - Fake", 
+               color="red", density=True, edgecolor="black", linewidth=0.5)
+
+    # set labels and formatting
+    ax.set_xlabel("Prediction Score (Fake Probability)", fontsize=14, fontweight="bold")
+    ax.set_ylabel("Density", fontsize=14, fontweight="bold")
+    ax.set_title(f"Score Distribution - {model_name}", fontsize=16, fontweight="bold")
+    ax.legend(fontsize=11, loc="best", framealpha=0.9)
+    ax.grid(True, alpha=0.3, linestyle="--")
+    
+    # set x-axis limits to [0, 1] for probability scores
+    ax.set_xlim([0, 1])
+    
+    # improve y-axis visibility
+    ax.set_ylim(bottom=0)
+    
+    # add vertical line at 0.5 threshold
+    ax.axvline(x=0.5, color="gray", linestyle="--", linewidth=1.5, alpha=0.7, label="Threshold (0.5)")
 
     return ax
 

@@ -1,0 +1,24 @@
+{
+  "logistic_regression": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "auc": 1.0,
+    "true_negatives": 20,
+    "false_positives": 0,
+    "false_negatives": 0,
+    "true_positives": 6,
+    "false_positive_rate": 0.0
+  },
+  "lstm": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "auc": 1.0,
+    "true_negatives": 13460,
+    "false_positives": 0,
+    "false_negatives": 0,
+    "true_positives": 4038,
+    "false_positive_rate": 0.0
+  }
+}
