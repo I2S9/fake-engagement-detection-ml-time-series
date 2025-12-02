@@ -123,9 +123,14 @@ class TestAutocorrelation:
 
     def test_autocorrelation_short_series(self):
         """Test autocorrelation with short series."""
+        import warnings
+        
         series = pd.Series([10, 20])
 
-        autocorr = compute_autocorrelation(series, lags=[1, 2])
+        # suppress numpy warnings for short series
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=RuntimeWarning)
+            autocorr = compute_autocorrelation(series, lags=[1, 2])
 
         assert "autocorr_lag_1" in autocorr
         assert "autocorr_lag_2" in autocorr

@@ -11,10 +11,13 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
+from contextlib import asynccontextmanager
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -28,11 +31,60 @@ from src.utils.config import load_config
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# global variables for model
+pipeline: Optional[InferencePipeline] = None
+model_loaded = False
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan: startup and shutdown."""
+    global pipeline, model_loaded
+    
+    # Startup: try to load model automatically
+    try:
+        # try environment variable first
+        model_path = os.getenv("MODEL_PATH", None)
+        
+        # if not set, try default locations
+        if model_path is None:
+            default_paths = [
+                "models/baselines/logistic_regression.pkl",
+                "models/baselines/random_forest.pkl",
+                "models/baselines/isolation_forest.pkl",
+            ]
+            
+            for path in default_paths:
+                if os.path.exists(path):
+                    model_path = path
+                    logger.info(f"Found default model at {path}")
+                    break
+        
+        if model_path and os.path.exists(model_path):
+            try:
+                load_model(model_path=model_path)
+                logger.info("Model loaded automatically on startup")
+            except Exception as e:
+                logger.warning(f"Could not load model on startup: {e}")
+                logger.info("API will start without model. Use /load_model endpoint to load.")
+        else:
+            logger.info("No model found. Use /load_model endpoint to load a model.")
+    except Exception as e:
+        logger.error(f"Error during startup: {e}")
+        logger.info("API will start without model. Use /load_model endpoint to load.")
+    
+    yield
+    
+    # Shutdown: cleanup if needed
+    logger.info("Shutting down API")
+
+
 # create FastAPI app
 app = FastAPI(
     title="Fake Engagement Detection API",
     description="API for detecting fake engagement in time series data",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # add CORS middleware
@@ -44,9 +96,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# global variables for model
-pipeline: Optional[InferencePipeline] = None
-model_loaded = False
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Custom handler for validation errors (422).
+    
+    Provides clearer error messages for common validation issues.
+    """
+    errors = exc.errors()
+    error_messages = []
+    
+    for error in errors:
+        error_type = error.get("type")
+        error_loc = " -> ".join(str(loc) for loc in error.get("loc", []))
+        error_msg = error.get("msg", "")
+        error_input = error.get("input")
+        
+        # Provide user-friendly messages for common errors
+        if error_type == "missing":
+            field_name = error_loc.split(" -> ")[-1] if " -> " in error_loc else error_loc
+            error_messages.append(
+                f"Missing required field: '{field_name}'. "
+                f"Please provide all required fields: views, likes, comments, shares."
+            )
+        elif error_type == "greater_than_equal":
+            field_name = error_loc.split(" -> ")[-1] if " -> " in error_loc else error_loc
+            error_messages.append(
+                f"Invalid value for '{field_name}': {error_input}. "
+                f"Value must be greater than or equal to 0."
+            )
+        elif error_type == "value_error":
+            error_messages.append(f"Validation error at {error_loc}: {error_msg}")
+        else:
+            error_messages.append(f"Error at {error_loc}: {error_msg}")
+    
+    # Combine all error messages
+    detail_message = " | ".join(error_messages) if error_messages else "Validation error"
+    
+    logger.warning(f"Validation error: {detail_message}")
+    
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Validation Error",
+            "detail": detail_message,
+            "errors": errors,  # Include full error details for debugging
+        },
+    )
 
 
 # Pydantic models for request/response
@@ -59,7 +156,8 @@ class TimeSeriesPoint(BaseModel):
     comments: float = Field(..., ge=0, description="Number of comments")
     shares: float = Field(..., ge=0, description="Number of shares")
 
-    @validator("timestamp")
+    @field_validator("timestamp")
+    @classmethod
     def validate_timestamp(cls, v):
         """Validate timestamp format."""
         try:
@@ -73,9 +171,10 @@ class TimeSeriesRequest(BaseModel):
     """Request model for single time series prediction."""
 
     id: str = Field(..., description="Video or user ID")
-    time_series: List[TimeSeriesPoint] = Field(..., min_items=1, description="Time series data points")
+    time_series: List[TimeSeriesPoint] = Field(..., min_length=1, description="Time series data points")
 
-    @validator("time_series")
+    @field_validator("time_series")
+    @classmethod
     def validate_time_series_length(cls, v):
         """Validate time series has minimum length."""
         if len(v) < 1:
@@ -86,9 +185,10 @@ class TimeSeriesRequest(BaseModel):
 class BatchTimeSeriesRequest(BaseModel):
     """Request model for batch prediction."""
 
-    time_series_list: List[TimeSeriesRequest] = Field(..., min_items=1, description="List of time series")
+    time_series_list: List[TimeSeriesRequest] = Field(..., min_length=1, description="List of time series")
 
-    @validator("time_series_list")
+    @field_validator("time_series_list")
+    @classmethod
     def validate_batch_size(cls, v):
         """Validate batch size."""
         if len(v) == 0:
@@ -261,21 +361,6 @@ def convert_request_to_dataframe(request: TimeSeriesRequest) -> pd.DataFrame:
     return df
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Load model on startup."""
-    global pipeline, model_loaded
-
-    try:
-        model_path = os.getenv("MODEL_PATH", None)
-        if model_path:
-            load_model(model_path=model_path)
-            logger.info("Model loaded on startup")
-        else:
-            logger.warning("MODEL_PATH not set. Model will need to be loaded manually.")
-    except Exception as e:
-        logger.error(f"Could not load model on startup: {e}")
-        logger.info("API will start without model. Use /load_model endpoint to load.")
 
 
 @app.get("/", response_model=Dict[str, str])
@@ -300,7 +385,8 @@ async def health_check():
     """
     global pipeline, model_loaded
 
-    status = "healthy" if model_loaded else "model_not_loaded"
+    # Always return "ok" status as requested
+    status = "ok"
     model_type = None
     model_path = None
 
