@@ -437,9 +437,9 @@ def simulate_user_series(
 
 
 def generate_dataset(
-    n_users: int = 1000,
-    length: int = 24 * 7,  # 1 week hourly
-    fake_ratio: float = 0.3,
+    n_users: int = 2000,
+    length: int = 24 * 14,  # 2 weeks hourly
+    fake_ratio: float = 0.35,
     start_timestamp: str = "2024-01-01",
     freq: str = "H",
     random_seed: int = 42,
