@@ -62,8 +62,10 @@ models/
 mlruns/
 
 # Outputs and results
-outputs/
+outputs/*
 !outputs/.gitkeep
+!outputs/figures/
+!outputs/figures/**
 
 # Logs
 *.log
