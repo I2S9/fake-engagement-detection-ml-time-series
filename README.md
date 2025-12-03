@@ -2,7 +2,11 @@
 
 ## Project Overview
 
-This project detects fake engagement on TikTok-like platforms using temporal ML and realistic time-series simulation. The system generates synthetic data mimicking authentic behavior, injects multiple fraud attack types, and applies anomaly detection algorithms. The simulator reproduces daily cycles, weekly patterns, and natural noise. Feature engineering and deep learning models achieve measurable separability between normal and fake patterns.
+<div style="text-align: justify">
+
+> This project detects fake engagement on TikTok-like platforms using temporal ML and realistic time-series simulation. The system generates synthetic data mimicking authentic behavior, injects multiple fraud attack types, and applies anomaly detection algorithms. The simulator reproduces daily cycles, weekly patterns, and natural noise. Feature engineering and deep learning models achieve measurable separability between normal and fake patterns.
+
+</div>
 
 ## Key Features
 
@@ -16,11 +20,19 @@ This project detects fake engagement on TikTok-like platforms using temporal ML 
 
 ## Dataset Simulation
 
+<div style="text-align: justify">
+
 The synthetic dataset contains normal users with seven distinct behavioral profiles (regular, impulsive, dormant, influencer, new, casual, power) and fake users with twelve different attack types. Each time series spans 336 timestamps (14 days at hourly resolution) with four engagement metrics: views, likes, comments, and shares. The simulator reproduces realistic temporal patterns including daily activity cycles, weekend effects, seasonal variations, and natural noise. User profiles differ in scale, variability, and spike frequency, while attack patterns modify baseline engagement multiplicatively to simulate realistic fraud scenarios.
+
+</div>
 
 ## Methodology
 
+<div style="text-align: justify">
+
 The pipeline begins with synthetic data generation using probabilistic models that capture user behavior heterogeneity. Feature engineering extracts temporal characteristics including rolling statistics, autocorrelation, entropy measures, burst detection, and trend features. Anomaly injection applies multiplicative factors to baseline engagement within specific time windows, preserving temporal coherence. Exploratory analysis validates statistical properties and visual patterns. Model training uses both aggregate features for classical ML and sequential data for deep learning approaches. Evaluation employs train/validation/test splits with temporal awareness to prevent data leakage.
+
+</div>
 
 ## Exploratory Analysis Highlights
 
@@ -42,7 +54,11 @@ The pipeline begins with synthetic data generation using probabilistic models th
 
 ## Anomaly Injection Strategy
 
+<div style="text-align: justify">
+
 Five primary attack types simulate different fraud scenarios: `boost_progressive` applies gradual multiplicative increases to mimic organic growth manipulation; `bursts_small` creates multiple small spikes at irregular intervals; `wave_spam` generates periodic wave patterns characteristic of synchronized bot networks; `single_spike` produces massive isolated spikes representing obvious fraud attempts; `off_peak_bursts` injects engagement during unusual hours (2-5 AM) to exploit low-traffic periods. Each attack modifies baseline engagement multiplicatively after normal pattern generation, ensuring temporal coherence while introducing detectable anomalies.
+
+</div>
 
 ## Models Trained
 
