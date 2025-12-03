@@ -2,9 +2,7 @@
 
 ## Project Overview
 
-> This project implements a detection system for fake engagement behavior on TikTok-like short-video platforms using temporal machine learning and statistically realistic time-series simulation. The system generates synthetic engagement data that mimics authentic user behavior patterns, injects multiple types of fraud attacks, and applies anomaly detection algorithms to identify inauthentic engagement. 
-
-> The simulator reproduces realistic temporal dynamics including daily cycles, weekly patterns, bursty growth, and natural noise. The methodology combines feature engineering, deep learning models, and statistical anomaly detection to achieve measurable separability between normal and fake engagement patterns.
+This project detects fake engagement on TikTok-like platforms using temporal ML and realistic time-series simulation. The system generates synthetic data mimicking authentic behavior, injects multiple fraud attack types, and applies anomaly detection algorithms. The simulator reproduces daily cycles, weekly patterns, and natural noise. Feature engineering and deep learning models achieve measurable separability between normal and fake patterns.
 
 ## Key Features
 
@@ -26,25 +24,21 @@ The pipeline begins with synthetic data generation using probabilistic models th
 
 ## Exploratory Analysis Highlights
 
+<div align="center">
+
 ![Distribution Histograms](outputs/figures/01_exploration_01_histograms.png)
 
-Fake engagement shows higher variance and heavier tails compared to normal patterns. The distribution separation is most pronounced in views and likes metrics.
-
-![Temporal Patterns Comparison](outputs/figures/01_exploration_02_temporal_patterns.png)
-
-Normal users exhibit regular daily and weekly cycles, while fake patterns show disrupted temporal structure with abnormal spikes and inconsistent patterns over time.
+*Fake engagement shows higher variance and heavier tails. Distribution separation is most pronounced in views and likes metrics.*
 
 ![Correlation Heatmaps](outputs/figures/01_exploration_04_correlation_heatmaps.png)
 
-Fake engagement displays stronger correlations between metrics (average 0.91 vs 0.86 for normal), indicating synchronized bot behavior that violates natural engagement variability.
-
-![Variability Boxplots](outputs/figures/01_exploration_05_plot.png)
-
-Coefficient of variation analysis reveals fake patterns have consistently higher variability across all metrics, with fake CV exceeding normal by 20-40% on average.
+*Fake engagement displays stronger correlations (0.91 vs 0.86 for normal), indicating synchronized bot behavior that violates natural variability.*
 
 ![Time Series with Anomaly Windows](outputs/figures/01_exploration_05_series_with_anomalies.png)
 
-Red zones highlight anomaly windows where fake engagement is injected. Visual inspection confirms clear temporal localization of fraudulent activity.
+*Red zones highlight anomaly windows where fake engagement is injected, confirming clear temporal localization of fraudulent activity.*
+
+</div>
 
 ## Anomaly Injection Strategy
 
